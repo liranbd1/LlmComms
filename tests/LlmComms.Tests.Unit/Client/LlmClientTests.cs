@@ -81,12 +81,17 @@ public sealed class LlmClientTests
         var request = new Request(new List<Message> { new(MessageRole.User, "stream?") });
 
         provider.StreamAsync(model, Arg.Any<Request>(), Arg.Any<ProviderCallContext>(), Arg.Any<CancellationToken>())
-            .Returns(_ => ThrowingStream());
+            .Returns(_ => throw new NotSupportedException("Streaming is not available for this model."));
 
-        var act = () => client.StreamAsync(request, CancellationToken.None).GetAsyncEnumerator().MoveNextAsync().AsTask();
+        Func<Task> act = async () =>
+        {
+            await foreach (var _ in client.StreamAsync(request, CancellationToken.None))
+            {
+            }
+        };
 
         await act.Should().ThrowAsync<NotSupportedException>();
-        await provider.Received(1).StreamAsync(model, Arg.Any<Request>(), Arg.Any<ProviderCallContext>(), Arg.Any<CancellationToken>());
+        provider.Received(1).StreamAsync(model, Arg.Any<Request>(), Arg.Any<ProviderCallContext>(), Arg.Any<CancellationToken>());
     }
 
     private sealed class TestMiddleware : IMiddleware
@@ -114,12 +119,5 @@ public sealed class LlmClientTests
                 yield return item;
             }
         }
-    }
-
-    private static async IAsyncEnumerable<StreamEvent> ThrowingStream()
-    {
-        await Task.Yield();
-        throw new NotSupportedException("Streaming is not available for this model.");
-        yield break;
     }
 }

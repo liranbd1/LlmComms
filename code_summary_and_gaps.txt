@@ -1,5 +1,6 @@
 Core Library
 - LlmClient executes requests via the composed middleware chain, applies default max-token configuration, and delegates streaming directly to the provider (src/LlmComms.Core/Client/LlmClient.cs).
+- Responses expose optional reasoning traces and streaming events surface reasoning chunks when providers supply chain-of-thought output (src/LlmComms.Abstractions/Contracts/Response.cs, StreamEvent.cs).
 - LlmClientBuilder captures provider/model selection, clones ClientOptions, and composes the default pipeline of tracing → redaction → logging → metrics → validator → optional cache → terminal middleware (src/LlmComms.Core/Client/LlmClientBuilder.cs, src/LlmComms.Core/Client/MiddlewarePipelineBuilder.cs).
 - Abstractions define stable request/response/streaming DTOs, tool definitions, client options, and provider ports to keep adapters loosely coupled (src/LlmComms.Abstractions/Contracts/*, src/LlmComms.Abstractions/Ports/*).
 
@@ -21,10 +22,11 @@ Tests
 - Integration test project exists but has no scenarios yet (tests/LlmComms.Tests.Integration).
 
 Providers & Samples
-- Provider adapters for OpenAI, Anthropic, and Azure are placeholders with no implementation (src/LlmComms.Providers.*).
-- Sample console hosts are default templates without wiring to the client (samples/LlmComms.Samples.*).
+- Ollama provider implements send/stream paths against the REST API, including reasoning traces and thinking streams (src/LlmComms.Providers.Ollama/*).
+- OpenAI, Anthropic, and Azure provider projects remain scaffolds (src/LlmComms.Providers.*).
+- Basic sample now demonstrates chatting with an Ollama model and printing reasoning traces (samples/LlmComms.Samples.Basic).
 
 Notable Gaps
-- No concrete provider adapters, transport wiring, or policy integration means the client cannot reach real LLM endpoints yet.
+- Only the Ollama adapter is implemented; OpenAI/Azure/Anthropic providers remain TODO.
 - Streaming options such as ClientOptions.EnableTokenUsageEvents and CoalesceFinalStreamText are defined but unused in the current pipeline.
-- Integration tests and sample applications do not exercise the end-to-end pipeline, leaving observability and provider behavior unverified.
+- Broader integration coverage (beyond the Ollama happy-path smoke test) is still missing.

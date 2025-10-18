@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LlmComms.Samples.Basic", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LlmComms.Samples.Advanced", "samples\LlmComms.Samples.Advanced\LlmComms.Samples.Advanced.csproj", "{CA45614A-D517-4632-9872-5DF25CF70FB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LlmComms.Providers.Ollama", "src\LlmComms.Providers.Ollama\LlmComms.Providers.Ollama.csproj", "{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -145,6 +147,18 @@ Global
 		{CA45614A-D517-4632-9872-5DF25CF70FB5}.Release|x64.Build.0 = Release|Any CPU
 		{CA45614A-D517-4632-9872-5DF25CF70FB5}.Release|x86.ActiveCfg = Release|Any CPU
 		{CA45614A-D517-4632-9872-5DF25CF70FB5}.Release|x86.Build.0 = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|x64.Build.0 = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Debug|x86.Build.0 = Debug|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|x64.ActiveCfg = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|x64.Build.0 = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|x86.ActiveCfg = Release|Any CPU
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -159,5 +173,6 @@ Global
 		{2739FB4F-A83C-4117-A054-7515A2A663DC} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{E82F6F01-32AF-45BD-AB53-B61A122EEFE6} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{CA45614A-D517-4632-9872-5DF25CF70FB5} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
+		{576D5C9A-36F7-4CC7-B899-C5F714FFFA94} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

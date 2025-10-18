@@ -129,6 +129,7 @@ SDK or REST via ITransport
 - **Usage**: LLMUsage - Token consumption details
 - **FinishReason**: string? - Why completion stopped (stop|length|tool_call)
 - **ToolCalls**: IReadOnlyList<ToolCall>? (optional) - Tool invocations if any
+- **Reasoning**: ReasoningTrace? (optional) - Provider reasoning/chain-of-thought segments when exposed
 - **ProviderRaw**: IReadOnlyDictionary<string, object>? (optional) - Raw provider data passthrough
 
 #### LLMUsage
@@ -136,9 +137,18 @@ SDK or REST via ITransport
 - **CompletionTokens**: int - Output tokens generated
 - **TotalTokens**: int - Sum of prompt + completion
 
+#### ReasoningTrace
+- **Segments**: IReadOnlyList<ReasoningSegment> - Ordered reasoning chunks emitted by the provider
+- **Metadata**: IReadOnlyDictionary<string, object>? - Provider-specific metadata (e.g., reasoning token counts)
+
+#### ReasoningSegment
+- **Text**: string - Reasoning text chunk
+- **Metadata**: IReadOnlyDictionary<string, object>? - Optional per-segment metadata
+
 #### LLMStreamEvent
-- **Kind**: string - Event type: "delta" | "tool_call" | "complete" | "error"
+- **Kind**: string - Event type: "delta" | "reasoning" | "tool_call" | "complete" | "error"
 - **TextDelta**: string? (optional) - Incremental text chunk
+- **ReasoningDelta**: ReasoningSegment? (optional) - Incremental reasoning chunk
 - **ToolCallDelta**: ToolCall? (optional) - Incremental tool call data
 - **UsageDelta**: LLMUsage? (optional) - Incremental token usage
 - **IsTerminal**: bool - True only on graceful completion (exactly once)
@@ -383,6 +393,7 @@ SDK or REST via ITransport
 - OpenAI (GPT-4, GPT-3.5)
 - Anthropic (Claude)
 - Azure OpenAI
+- Ollama (self-hosted/local models)
 
 ## Non-Goals (v1)
 

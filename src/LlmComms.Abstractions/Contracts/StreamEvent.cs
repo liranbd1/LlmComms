@@ -35,6 +35,11 @@ public record StreamEvent
     public Usage? UsageDelta { get; set; }
 
     /// <summary>
+    /// Gets the incremental reasoning chunk (for reasoning events).
+    /// </summary>
+    public ReasoningSegment? ReasoningDelta { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this is the terminal event (exactly once on graceful completion).
     /// </summary>
     public bool IsTerminal { get; set; }
@@ -59,6 +64,11 @@ public enum StreamEventKind
     /// Completion with final usage data.
     /// </summary>
     Complete,
+
+    /// <summary>
+    /// Reasoning chunk emitted by the model.
+    /// </summary>
+    Reasoning,
 
     /// <summary>
     /// Error occurred during streaming.

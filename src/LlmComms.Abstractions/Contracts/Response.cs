@@ -62,4 +62,9 @@ public record Response
     /// Gets raw provider-specific data that doesn't fit the standard schema.
     /// </summary>
     public IReadOnlyDictionary<string, object>? ProviderRaw { get; set; }
+
+    /// <summary>
+    /// Gets the reasoning trace emitted by the provider, if available.
+    /// </summary>
+    public ReasoningTrace? Reasoning { get; set; }
 }

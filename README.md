@@ -37,9 +37,20 @@ var client = new LlmClientBuilder()
 var response = await client.SendAsync(request, cancellationToken);
 ```
 
+## Providers
+
+LlmComms ships with provider adapters you can reference as needed:
+
+- `LlmComms.Providers.Ollama` – targets the Ollama REST API (`/api/chat`, `/api/generate`, `/api/embed`) and works against local or remote Ollama hosts. Configure it with the Ollama base URL and optionally supply your own `ITransport` implementation if you need to customize HTTP handling.
+- `LlmComms.Providers.OpenAI`, `LlmComms.Providers.Azure`, and `LlmComms.Providers.Anthropic` are scaffolds today and will gain concrete implementations in upcoming iterations.
+
 ### Streaming Requests
 
 Streaming calls always flow to the configured provider. If the selected model does not support streaming, the provider’s error is propagated to the caller. The middleware pipeline still runs for streaming calls, and the logging/metrics components emit aggregated usage and duration once enumeration completes.
+
+### Reasoning Traces
+
+If a provider exposes chain-of-thought output (for example, Ollama thinking models or OpenAI’s reasoning responses), the normalized `Response.Reasoning` property captures it and streaming callers receive `StreamEventKind.Reasoning` events you can render or store. The full provider payload still lives in `Response.ProviderRaw` when you need vendor-specific details.
 
 ## Observability & Redaction
 
@@ -72,6 +83,5 @@ These tests use fakes via NSubstitute and a `MeterListener` harness to assert em
 
 ## Next Steps
 
-- Implement validator and cache middleware to complete the phase 4 stack.
-- Wire provider adapters (OpenAI, Anthropic, Azure) into the client builder.
+- Finish the remaining provider adapters (OpenAI, Anthropic, Azure).
 - Add integration tests that execute the full pipeline against in-memory or mock providers for additional coverage.
