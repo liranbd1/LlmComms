@@ -49,9 +49,6 @@ public sealed class LlmClient : IClient
         if (request == null)
             throw new ArgumentNullException(nameof(request));
 
-        if (!_provider.Capabilities.SupportsStreaming)
-            throw new NotSupportedException($"Provider '{_provider.Name}' does not support streaming.");
-
         var preparedRequest = EnsureDefaultConfiguration(request);
         var context = CreateContext(preparedRequest, cancellationToken);
 

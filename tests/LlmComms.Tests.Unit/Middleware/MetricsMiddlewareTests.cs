@@ -47,7 +47,6 @@ public sealed class MetricsMiddlewareTests : IDisposable
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("metrics-provider");
-        provider.Capabilities.Returns(new ProviderCapabilities { SupportsStreaming = true });
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("metrics-model");

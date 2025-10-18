@@ -17,7 +17,6 @@ public sealed class RedactionMiddlewareTests
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("test-provider");
-        provider.Capabilities.Returns(new ProviderCapabilities());
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("test-model");
@@ -59,7 +58,6 @@ public sealed class RedactionMiddlewareTests
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("test-provider");
-        provider.Capabilities.Returns(new ProviderCapabilities());
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("test-model");

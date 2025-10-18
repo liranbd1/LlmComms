@@ -20,7 +20,6 @@ public sealed class LoggingMiddlewareTests
 
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("provider-x");
-        provider.Capabilities.Returns(new ProviderCapabilities());
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("model-y");
@@ -64,7 +63,6 @@ public sealed class LoggingMiddlewareTests
 
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("provider-x");
-        provider.Capabilities.Returns(new ProviderCapabilities());
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("model-y");

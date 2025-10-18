@@ -39,7 +39,7 @@ var response = await client.SendAsync(request, cancellationToken);
 
 ### Streaming Requests
 
-Streaming is available only when the provider advertises `ProviderCapabilities.SupportsStreaming`. Attempting to stream otherwise results in a `NotSupportedException`. The middleware pipeline still runs for streaming calls, and the logging/metrics components emit aggregated usage and duration once enumeration completes.
+Streaming calls always flow to the configured provider. If the selected model does not support streaming, the provider’s error is propagated to the caller. The middleware pipeline still runs for streaming calls, and the logging/metrics components emit aggregated usage and duration once enumeration completes.
 
 ## Observability & Redaction
 

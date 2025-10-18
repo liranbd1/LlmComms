@@ -13,11 +13,6 @@ public interface IProvider
     string Name { get; }
 
     /// <summary>
-    /// Gets the capabilities supported by this provider.
-    /// </summary>
-    ProviderCapabilities Capabilities { get; }
-
-    /// <summary>
     /// Creates a model instance with the specified identifier.
     /// </summary>
     /// <param name="modelId">The model identifier (e.g., "gpt-4", "claude-3-opus").</param>

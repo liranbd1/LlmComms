@@ -19,7 +19,6 @@ public sealed class LlmClientTests
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("provider-a");
-        provider.Capabilities.Returns(new ProviderCapabilities { SupportsStreaming = true });
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("model-1");
@@ -68,7 +67,6 @@ public sealed class LlmClientTests
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("provider-b");
-        provider.Capabilities.Returns(new ProviderCapabilities { SupportsStreaming = false });
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("model-2");
@@ -82,9 +80,13 @@ public sealed class LlmClientTests
         var client = builder.Build();
         var request = new Request(new List<Message> { new(MessageRole.User, "stream?") });
 
+        provider.StreamAsync(model, Arg.Any<Request>(), Arg.Any<ProviderCallContext>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ThrowingStream());
+
         var act = () => client.StreamAsync(request, CancellationToken.None).GetAsyncEnumerator().MoveNextAsync().AsTask();
 
         await act.Should().ThrowAsync<NotSupportedException>();
+        await provider.Received(1).StreamAsync(model, Arg.Any<Request>(), Arg.Any<ProviderCallContext>(), Arg.Any<CancellationToken>());
     }
 
     private sealed class TestMiddleware : IMiddleware
@@ -112,5 +114,12 @@ public sealed class LlmClientTests
                 yield return item;
             }
         }
+    }
+
+    private static async IAsyncEnumerable<StreamEvent> ThrowingStream()
+    {
+        await Task.Yield();
+        throw new NotSupportedException("Streaming is not available for this model.");
+        yield break;
     }
 }

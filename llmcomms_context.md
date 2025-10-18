@@ -171,7 +171,6 @@ SDK or REST via ITransport
 
 **Properties**:
 - `string Name` - Provider identifier (e.g., "openai", "anthropic")
-- `ProviderCapabilities Capabilities` - Feature support flags
 
 **Methods**:
 - `ILLMModel CreateModel(string modelId, ProviderModelOptions? options = null)`
@@ -251,20 +250,11 @@ SDK or REST via ITransport
 **Fields**:
 - `DefaultMaxOutputTokens` - int? - Override default max tokens for this model
 
-### Capabilities System
+### Model Selection Responsibilities
 
-#### ProviderCapabilities
-**Purpose**: Declarative feature support flags for runtime branching
-
-**Fields**:
-- `SupportsStreaming` - bool - Can stream responses?
-- `SupportsJsonMode` - bool - Supports json_object response format?
-- `SupportsTools` - bool - Supports function/tool calling?
-- `SupportsBatch` - bool - Supports batch requests?
-- `SupportsVision` - bool - Supports image inputs?
-- `SupportsAudio` - bool - Supports audio inputs?
-
-**Usage Pattern**: Check capabilities before issuing request; fail early with `ValidationException` if unsupported, or gracefully degrade based on options.
+- **Callers** choose models whose features match their requests (e.g., vision inputs, tool calls, JSON mode). If the chosen model rejects a payload, the provider’s error surfaces to the caller unchanged.
+- **Providers** translate vendor responses and propagate unsupported-feature errors instead of attempting to pre-validate capabilities.
+- **Middleware** treats payloads generically; validators focus on schema correctness and leave feature gating to providers.
 
 ## Error Taxonomy
 
@@ -384,7 +374,7 @@ SDK or REST via ITransport
 ### Implementation Contract
 1. Implement `ILLMProvider` once
 2. Internal SDK or REST strategy is opaque (hidden from public API)
-3. Populate `Capabilities` accurately
+3. Propagate unsupported-feature responses from the vendor without pre-filtering
 4. Normalize/translate vendor errors to error taxonomy
 5. Map vendor streaming events to ordered `LLMStreamEvent` deltas
 6. Provide REST fallback for netstandard2.0 compatibility
@@ -469,7 +459,7 @@ LlmComms/
 2. Public types/names match spec exactly
 3. Middleware ordering enforced
 4. Policy defaults: timeout=60s, retries=2 with jitter
-5. `ProviderCapabilities` surfaced and enforced
+5. Capability-agnostic flow verified (providers surface unsupported-feature errors)
 6. Streaming preserves order; terminal event semantics honored
 7. Error taxonomy thrown as specified
 8. No vendor or transport dependencies leak into Abstractions
@@ -489,7 +479,7 @@ LlmComms/
    - LLMUsage, LLMStreamEvent
    - ToolDefinition, ToolCollection, ToolCall
    - ProviderCallContext, LLMContext, LlmClientOptions
-   - ProviderCapabilities, ProviderModelOptions
+   - ProviderModelOptions
 
 2. Create interfaces in `src/LlmComms.Abstractions/Ports/`:
    - ILLMClient

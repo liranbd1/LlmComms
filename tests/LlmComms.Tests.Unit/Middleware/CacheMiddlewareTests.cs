@@ -106,7 +106,6 @@ public sealed class CacheMiddlewareTests
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("cache-provider");
-        provider.Capabilities.Returns(new ProviderCapabilities());
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("cache-model");

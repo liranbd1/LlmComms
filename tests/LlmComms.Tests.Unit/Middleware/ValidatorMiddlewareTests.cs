@@ -15,26 +15,9 @@ public sealed class ValidatorMiddlewareTests
     private readonly ValidatorMiddleware _middleware = new();
 
     [Fact]
-    public async Task InvokeAsync_ThrowsWhenProviderDoesNotSupportJson()
-    {
-        var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsJsonMode = false },
-            request: new Request(new List<Message> { new(MessageRole.User, "hello") })
-            {
-                ResponseFormat = ResponseFormat.JsonObject
-            });
-
-        var act = () => _middleware.InvokeAsync(context, _ => Task.FromResult(CreateValidResponse()));
-
-        await act.Should().ThrowAsync<ValidationException>()
-            .WithMessage("*does not support JSON*");
-    }
-
-    [Fact]
     public async Task InvokeAsync_InvalidJsonThrowsInStrictMode()
     {
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsJsonMode = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 ResponseFormat = ResponseFormat.JsonObject
@@ -53,7 +36,6 @@ public sealed class ValidatorMiddlewareTests
     public async Task InvokeAsync_InvalidJsonMarksProviderRawInLenientMode()
     {
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsJsonMode = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 ResponseFormat = ResponseFormat.JsonObject
@@ -77,7 +59,6 @@ public sealed class ValidatorMiddlewareTests
         });
 
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsTools = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 Tools = tools
@@ -107,7 +88,6 @@ public sealed class ValidatorMiddlewareTests
         });
 
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsTools = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 Tools = tools
@@ -126,7 +106,6 @@ public sealed class ValidatorMiddlewareTests
     public async Task InvokeStreamAsync_InvalidJsonThrowsInStrictMode()
     {
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsStreaming = true, SupportsJsonMode = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 ResponseFormat = ResponseFormat.JsonObject
@@ -159,7 +138,6 @@ public sealed class ValidatorMiddlewareTests
         };
 
         var context = CreateContext(
-            providerCapabilities: new ProviderCapabilities { SupportsStreaming = true, SupportsJsonMode = true },
             request: new Request(new List<Message> { new(MessageRole.User, "hello") })
             {
                 ResponseFormat = ResponseFormat.JsonObject
@@ -198,13 +176,11 @@ public sealed class ValidatorMiddlewareTests
     }
 
     private static LLMContext CreateContext(
-        ProviderCapabilities providerCapabilities,
         Request request,
         ClientOptions? options = null)
     {
         var provider = Substitute.For<IProvider>();
         provider.Name.Returns("validator-provider");
-        provider.Capabilities.Returns(providerCapabilities);
 
         var model = Substitute.For<IModel>();
         model.ModelId.Returns("validator-model");

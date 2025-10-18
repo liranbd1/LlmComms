@@ -11,7 +11,7 @@ using LlmComms.Abstractions.Ports;
 namespace LlmComms.Core.Middleware;
 
 /// <summary>
-/// Middleware that validates requests and responses for capability and schema compliance.
+/// Middleware that validates requests and responses for schema compliance.
 /// </summary>
 public sealed class ValidatorMiddleware : IMiddleware
 {
@@ -30,8 +30,6 @@ public sealed class ValidatorMiddleware : IMiddleware
         if (next == null)
             throw new ArgumentNullException(nameof(next));
 
-        ValidateCapabilities(context, streaming: false);
-
         var response = await next(context).ConfigureAwait(false);
 
         ValidateJsonResponse(context, response);
@@ -49,8 +47,6 @@ public sealed class ValidatorMiddleware : IMiddleware
             throw new ArgumentNullException(nameof(context));
         if (next == null)
             throw new ArgumentNullException(nameof(next));
-
-        ValidateCapabilities(context, streaming: true);
 
         var shouldValidateJson = ShouldValidateJson(context);
         var jsonBuffer = shouldValidateJson ? new StringBuilder() : null;
@@ -86,34 +82,6 @@ public sealed class ValidatorMiddleware : IMiddleware
             }
 
             yield return streamEvent;
-        }
-    }
-
-    private static void ValidateCapabilities(LLMContext context, bool streaming)
-    {
-        var capabilities = context.Provider.Capabilities ?? new ProviderCapabilities();
-
-        if (context.Request.ResponseFormat == ResponseFormat.JsonObject && !capabilities.SupportsJsonMode)
-        {
-            throw new ValidationException(
-                $"Provider '{context.Provider.Name}' does not support JSON response format.",
-                context.CallContext.RequestId);
-        }
-
-        if (context.Request.Tools != null &&
-            context.Request.Tools.Tools.Any() &&
-            !capabilities.SupportsTools)
-        {
-            throw new ValidationException(
-                $"Provider '{context.Provider.Name}' does not support tool invocation.",
-                context.CallContext.RequestId);
-        }
-
-        if (streaming && !capabilities.SupportsStreaming)
-        {
-            throw new ValidationException(
-                $"Provider '{context.Provider.Name}' does not support streaming.",
-                context.CallContext.RequestId);
         }
     }
 
