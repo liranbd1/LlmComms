@@ -54,6 +54,6 @@ Secrets/
 .sln.iml
 
 ## Repo docs (local-only)
-AGENTS.md
-code_summary_and_gaps.txt
-llmcomms_context.md
+./AGENTS.md
+./code_summary_and_gaps.txt
+./llmcomms_context.md
