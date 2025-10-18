@@ -1,24 +1,59 @@
-## .NET
+## Build outputs
 bin/
 obj/
-*.user
-*.suo
-*.cache
-*.dll
-*.pdb
+artifacts/
+TestResults/
 
-## IDE
+## User-specific files
+*.user
+*.rsuser
+*.suo
+*.userprefs
+
+## IDE settings
 .vs/
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+*.sln.docstates
+*.DotSettings
+_ReSharper*/
+*.ncrunch*
 
-## OS
+## OS cruft
 .DS_Store
 Thumbs.db
 
-## Secrets
+tools/
+
+## Cache files
+*.cache
+*.pidb
+*.pdb
+
+## Packages
+*.nupkg
+packages/
+
+## Secrets / local config
 appsettings.Development.json
 *.pfx
+*.snk
+
+## Logs & coverage
+*.log
+coverage/
+coverage.cobertura.xml
+lcov.info
+
+## Local environment
+.env
+.env.*
+Secrets/
+
+## Rider solution cache
+.sln.iml
+
+## Repo docs (local-only)
+AGENTS.md
+code_summary_and_gaps.txt
+llmcomms_context.md
