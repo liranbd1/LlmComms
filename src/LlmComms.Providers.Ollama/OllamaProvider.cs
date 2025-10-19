@@ -10,6 +10,7 @@ using LlmComms.Abstractions.Contracts;
 using LlmComms.Abstractions.Exceptions;
 using LlmComms.Abstractions.Ports;
 using LlmComms.Core.Transport;
+using LlmComms.Core.Utilities;
 
 namespace LlmComms.Providers.Ollama;
 
@@ -183,7 +184,7 @@ public sealed class OllamaProvider : IProvider
     {
         var requestBody = JsonSerializer.Serialize(payload, _serializerOptions);
 
-        var transportRequest = new TransportRequest
+        var transportRequest = new HttpTransportRequest
         {
             Url = new Uri(_baseUri, "/api/chat").ToString(),
             Method = "POST",
@@ -195,12 +196,11 @@ public sealed class OllamaProvider : IProvider
         };
 
         var transportResponse = await _transport.SendAsync(transportRequest, cancellationToken).ConfigureAwait(false);
-        var (statusCode, body) = ExtractTransportResponse(transportResponse);
+        var (statusCode, body) = TransportResponseReader.Read(transportResponse);
 
         if (statusCode >= 400)
         {
-            var errorMessage = TryExtractErrorMessage(body) ?? $"Ollama request failed with status code {statusCode}.";
-            throw new ProviderUnavailableException(errorMessage, context.RequestId, statusCode);
+            throw MapTransportError(statusCode, body, context.RequestId);
         }
 
         try
@@ -264,7 +264,7 @@ public sealed class OllamaProvider : IProvider
     {
         var requestBody = JsonSerializer.Serialize(payload, _serializerOptions);
 
-        var transportRequest = new TransportRequest
+        var transportRequest = new HttpTransportRequest
         {
             Url = new Uri(_baseUri, "/api/chat").ToString(),
             Method = "POST",
@@ -276,35 +276,20 @@ public sealed class OllamaProvider : IProvider
         };
 
         var transportResponse = await _transport.SendAsync(transportRequest, cancellationToken).ConfigureAwait(false);
-        var (statusCode, body) = ExtractTransportResponse(transportResponse);
+        var (statusCode, body) = TransportResponseReader.Read(transportResponse);
 
         if (statusCode >= 400)
         {
-            var errorMessage = TryExtractErrorMessage(body) ?? $"Ollama streaming request failed with status code {statusCode}.";
-            throw new ProviderUnavailableException(errorMessage, context.RequestId, statusCode);
+            throw MapTransportError(statusCode, body, context.RequestId);
         }
 
         return body;
     }
 
-    private static (int StatusCode, string Body) ExtractTransportResponse(object transportResponse)
+    private Exception MapTransportError(int statusCode, string body, string? requestId)
     {
-        var type = transportResponse.GetType();
-
-        var statusCodeProperty = type.GetProperty("StatusCode")
-            ?? throw new InvalidOperationException("Transport response missing StatusCode property.");
-        var bodyProperty = type.GetProperty("Body")
-            ?? throw new InvalidOperationException("Transport response missing Body property.");
-
-        var statusCodeValue = statusCodeProperty.GetValue(transportResponse);
-        var bodyValue = bodyProperty.GetValue(transportResponse);
-
-        if (statusCodeValue is not int statusCode)
-            throw new InvalidOperationException("Transport response StatusCode must be an integer.");
-
-        var body = bodyValue as string ?? string.Empty;
-
-        return (statusCode, body);
+        var message = TryExtractErrorMessage(body) ?? $"Ollama request failed with status code {statusCode}.";
+        return ProviderErrorMapper.Map(statusCode, message, requestId);
     }
 
     private string? TryExtractErrorMessage(string body)
@@ -331,7 +316,7 @@ public sealed class OllamaProvider : IProvider
         {
             var payload = new OllamaApi.MessagePayload
             {
-                Role = MapRole(message.Role),
+                Role = MessageRoleMapper.ToString(message.Role),
                 Content = message.Content
             };
 
@@ -341,35 +326,26 @@ public sealed class OllamaProvider : IProvider
         return result;
     }
 
-    private static string MapRole(MessageRole role)
-    {
-        return role switch
-        {
-            MessageRole.System => "system",
-            MessageRole.User => "user",
-            MessageRole.Assistant => "assistant",
-            MessageRole.Function => "tool",
-            _ => "user"
-        };
-    }
-
     private static IList<OllamaApi.ToolPayload>? MapTools(ToolCollection? toolCollection)
     {
-        if (toolCollection == null || toolCollection.Tools.Count == 0)
+        var descriptors = FunctionToolDescriptorFactory.CreateDescriptors(toolCollection);
+        if (descriptors.Count == 0)
             return null;
 
-        var tools = new List<OllamaApi.ToolPayload>(toolCollection.Tools.Count);
+        var tools = new List<OllamaApi.ToolPayload>(descriptors.Count);
 
-        foreach (var tool in toolCollection.Tools)
+        foreach (var descriptor in descriptors)
         {
-            var parameters = new Dictionary<string, object>();
-            foreach (var kvp in tool.JsonSchema)
+            var parameters = new Dictionary<string, object>(descriptor.Parameters.Count);
+            foreach (var kvp in descriptor.Parameters)
+            {
                 parameters[kvp.Key] = kvp.Value;
+            }
 
             var functionPayload = new OllamaApi.ToolFunctionPayload
             {
-                Name = tool.Name,
-                Description = tool.Description,
+                Name = descriptor.Name,
+                Description = descriptor.Description,
                 Parameters = parameters
             };
 
@@ -507,14 +483,6 @@ public sealed class OllamaProvider : IProvider
             "tool" => FinishReason.ToolCall,
             _ => null
         };
-    }
-
-    private sealed class TransportRequest
-    {
-        public string Url { get; set; } = string.Empty;
-        public string Method { get; set; } = "POST";
-        public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
-        public string Body { get; set; } = string.Empty;
     }
 
     private IEnumerable<OllamaApi.ChatResponsePayload> ParseStreamingPayloads(string rawStream, ProviderCallContext context)
