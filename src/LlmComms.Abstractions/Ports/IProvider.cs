@@ -15,6 +15,12 @@ public interface IProvider
     /// <summary>
     /// Creates a model instance with the specified identifier.
     /// </summary>
+    /// <remarks>
+    /// Implementations do not guarantee that the requested model supports the provided options
+    /// (for example, context window size or output format). Callers are responsible for
+    /// consulting the provider's documentation to ensure the selected model meets their
+    /// requirements before issuing requests.
+    /// </remarks>
     /// <param name="modelId">The model identifier (e.g., "gpt-4", "claude-3-opus").</param>
     /// <param name="options">Optional model-specific configuration.</param>
     /// <returns>A model instance.</returns>

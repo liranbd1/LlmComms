@@ -13,7 +13,7 @@
         <Copyright>Copyright © $([System.DateTime]::Now.Year)</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryType>git</RepositoryType>
-        <PackageProjectUrl>https://github.com/yourusername/LlmComms</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/liranbd1/LlmComms</PackageProjectUrl>
 
         <!-- Versioning -->
         <VersionPrefix>0.1.0</VersionPrefix>
