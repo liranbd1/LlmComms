@@ -109,12 +109,21 @@ public sealed class AzureOpenAIProviderTests
     }
 
     [Fact]
-    public void StreamAsync_WithCustomTransport_Throws()
+    public async Task StreamAsync_WithCustomTransport_ParsesServerSentEvents()
     {
+        var sse = string.Join(Environment.NewLine, new[]
+        {
+            "data: {\"choices\":[{\"delta\":{\"content\":[{\"text\":\"Hello\"}]}}]}",
+            string.Empty,
+            "data: {\"choices\":[{\"delta\":{\"content\":[{\"text\":\" world\"}]}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}",
+            string.Empty,
+            "data: [DONE]"
+        });
+
         var transport = new CapturingTransport(_ => Task.FromResult<object>(new
         {
             StatusCode = 200,
-            Body = "{}"
+            Body = sse
         }));
 
         var provider = new AzureOpenAIProvider(new AzureOpenAIProviderOptions
@@ -126,10 +135,30 @@ public sealed class AzureOpenAIProviderTests
 
         var model = provider.CreateModel("gpt-4o-mini");
         var request = new Request(new List<Message> { new(MessageRole.User, "stream") });
+        var context = new ProviderCallContext("req-stream");
 
-        Action act = () => provider.StreamAsync(model, request, new ProviderCallContext("req-stream"), CancellationToken.None);
+        var events = new List<StreamEvent>();
 
-        act.Should().Throw<NotSupportedException>();
+        await foreach (var streamEvent in provider.StreamAsync(model, request, context, CancellationToken.None))
+        {
+            events.Add(streamEvent);
+        }
+
+        events.Should().HaveCount(3);
+        events[0].Kind.Should().Be(StreamEventKind.Delta);
+        events[0].TextDelta.Should().Be("Hello");
+        events[1].Kind.Should().Be(StreamEventKind.Delta);
+        events[1].TextDelta.Should().Be(" world");
+        events[2].Kind.Should().Be(StreamEventKind.Complete);
+        events[2].IsTerminal.Should().BeTrue();
+        events[2].UsageDelta.Should().NotBeNull();
+        events[2].UsageDelta!.PromptTokens.Should().Be(10);
+        events[2].UsageDelta!.CompletionTokens.Should().Be(5);
+        events[2].UsageDelta!.TotalTokens.Should().Be(15);
+
+        var captured = transport.LastRequest.Should().BeOfType<HttpTransportRequest>().Subject;
+        captured.Headers.Should().ContainKey("Accept").WhoseValue.Should().Be("text/event-stream");
+        captured.Body.Should().Contain("\"stream\":true");
     }
 
     [Fact]

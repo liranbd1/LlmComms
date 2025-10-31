@@ -3,6 +3,7 @@ using System.ClientModel;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -216,13 +217,44 @@ public sealed class AzureOpenAIProvider : IProvider
         };
     }
 
-    private IAsyncEnumerable<StreamEvent> StreamWithTransportAsync(
+    private async IAsyncEnumerable<StreamEvent> StreamWithTransportAsync(
         IModel model,
         Request request,
         ProviderCallContext context,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        throw new NotSupportedException("Azure OpenAI custom transport streaming is pending implementation.");
+        var deploymentId = ResolveDeploymentId(model);
+        var endpoint = BuildChatEndpoint(deploymentId);
+        var payload = BuildTransportPayload(request, stream: true);
+        var body = JsonSerializer.Serialize(payload, TransportSerializerOptions);
+
+        var additionalHeaders = BuildAdditionalHeadersInternal(context, streaming: true);
+        var bearerToken = await AcquireBearerTokenAsync(cancellationToken).ConfigureAwait(false);
+        var headers = AzureProviderRequestBuilder.BuildHeaders(
+            apiKey: _options.ApiKey,
+            bearerToken: bearerToken,
+            additionalHeaders: additionalHeaders);
+
+        var transportRequest = new HttpTransportRequest
+        {
+            Url = endpoint.ToString(),
+            Method = "POST",
+            Headers = headers,
+            Body = body
+        };
+
+        var transportResponse = await _transportOverride!.SendAsync(transportRequest, cancellationToken).ConfigureAwait(false);
+        var (statusCode, responseBody) = TransportResponseReader.Read(transportResponse);
+
+        if (statusCode >= 400)
+        {
+            throw MapTransportError(statusCode, responseBody, context.RequestId);
+        }
+
+        foreach (var streamEvent in ParseStreamingResponse(responseBody))
+        {
+            yield return streamEvent;
+        }
     }
 
     private ChatClient GetChatClient(string deploymentId)
@@ -505,7 +537,7 @@ public sealed class AzureOpenAIProvider : IProvider
     {
         var deploymentId = ResolveDeploymentId(model);
         var endpoint = BuildChatEndpoint(deploymentId);
-        var payload = BuildTransportPayload(request);
+        var payload = BuildTransportPayload(request, stream: false);
         var body = JsonSerializer.Serialize(payload, TransportSerializerOptions);
 
         var additionalHeaders = BuildAdditionalHeaders(context);
@@ -551,12 +583,17 @@ public sealed class AzureOpenAIProvider : IProvider
         throw new InvalidOperationException("Azure OpenAI provider requires either an Endpoint or ResourceName for transport execution.");
     }
 
-    private static IDictionary<string, object?> BuildTransportPayload(Request request)
+    private static IDictionary<string, object?> BuildTransportPayload(Request request, bool stream)
     {
         var payload = new Dictionary<string, object?>
         {
             ["messages"] = AzureProviderRequestBuilder.BuildMessages(request.Messages)
         };
+
+        if (stream)
+        {
+            payload["stream"] = true;
+        }
 
         if (request.Temperature.HasValue)
         {
@@ -599,16 +636,24 @@ public sealed class AzureOpenAIProvider : IProvider
     }
 
     private IDictionary<string, string>? BuildAdditionalHeaders(ProviderCallContext context)
+        => BuildAdditionalHeadersInternal(context, streaming: false);
+
+    private IDictionary<string, string>? BuildAdditionalHeadersInternal(ProviderCallContext context, bool streaming)
     {
-        if (string.IsNullOrWhiteSpace(context.RequestId))
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(context.RequestId))
         {
-            return null;
+            headers["x-ms-client-request-id"] = context.RequestId;
         }
 
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        if (streaming)
         {
-            ["x-ms-client-request-id"] = context.RequestId
-        };
+            headers["Accept"] = "text/event-stream";
+            headers["Cache-Control"] = "no-cache";
+        }
+
+        return headers.Count == 0 ? null : headers;
     }
 
     private async Task<string?> AcquireBearerTokenAsync(CancellationToken cancellationToken)
@@ -703,6 +748,160 @@ public sealed class AzureOpenAIProvider : IProvider
         return builder.ToString();
     }
 
+    private IEnumerable<StreamEvent> ParseStreamingResponse(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            yield break;
+        }
+
+        Usage? lastUsage = null;
+
+        foreach (var payload in ReadServerSentEvents(responseBody))
+        {
+            if (string.Equals(payload, "[DONE]", StringComparison.Ordinal))
+            {
+                yield return new StreamEvent(StreamEventKind.Complete)
+                {
+                    UsageDelta = lastUsage,
+                    IsTerminal = true
+                };
+                yield break;
+            }
+
+            using var document = JsonDocument.Parse(payload);
+            var root = document.RootElement;
+
+            var text = ExtractStreamingDelta(root);
+            if (!string.IsNullOrEmpty(text))
+            {
+                yield return new StreamEvent(StreamEventKind.Delta)
+                {
+                    TextDelta = text
+                };
+            }
+
+            var usage = TryMapUsage(root);
+            if (usage != null)
+            {
+                lastUsage = usage;
+            }
+        }
+
+        yield return new StreamEvent(StreamEventKind.Complete)
+        {
+            UsageDelta = lastUsage,
+            IsTerminal = true
+        };
+    }
+
+    private static IEnumerable<string> ReadServerSentEvents(string responseBody)
+    {
+        using var reader = new StringReader(responseBody);
+        var builder = new StringBuilder();
+        string? line;
+
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (line.Length == 0)
+            {
+                if (builder.Length > 0)
+                {
+                    yield return builder.ToString();
+                    builder.Clear();
+                }
+
+                continue;
+            }
+
+            if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var data = line.Substring("data:".Length).TrimStart();
+
+            if (string.Equals(data, "[DONE]", StringComparison.Ordinal))
+            {
+                if (builder.Length > 0)
+                {
+                    yield return builder.ToString();
+                    builder.Clear();
+                }
+
+                yield return "[DONE]";
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+            }
+
+            builder.Append(data);
+        }
+
+        if (builder.Length > 0)
+        {
+            yield return builder.ToString();
+        }
+    }
+
+    private static string ExtractStreamingDelta(JsonElement root)
+    {
+        if (!root.TryGetProperty("choices", out var choicesElement) || choicesElement.ValueKind != JsonValueKind.Array)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+
+        foreach (var choice in choicesElement.EnumerateArray())
+        {
+            if (!choice.TryGetProperty("delta", out var deltaElement) || deltaElement.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!deltaElement.TryGetProperty("content", out var contentElement))
+            {
+                continue;
+            }
+
+            switch (contentElement.ValueKind)
+            {
+                case JsonValueKind.String:
+                    builder.Append(contentElement.GetString());
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var part in contentElement.EnumerateArray())
+                    {
+                        if (part.ValueKind == JsonValueKind.String)
+                        {
+                            builder.Append(part.GetString());
+                        }
+                        else if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("text", out var textElement) && textElement.ValueKind == JsonValueKind.String)
+                        {
+                            builder.Append(textElement.GetString());
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static Usage? TryMapUsage(JsonElement root)
+    {
+        if (!root.TryGetProperty("usage", out var usageElement) || usageElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return MapUsageElement(usageElement);
+    }
+
     private static Usage MapTransportUsage(JsonElement root)
     {
         if (!root.TryGetProperty("usage", out var usageElement) || usageElement.ValueKind != JsonValueKind.Object)
@@ -710,6 +909,11 @@ public sealed class AzureOpenAIProvider : IProvider
             return new Usage(0, 0, 0);
         }
 
+        return MapUsageElement(usageElement);
+    }
+
+    private static Usage MapUsageElement(JsonElement usageElement)
+    {
         static int ReadInt(JsonElement element, string propertyName)
         {
             return element.TryGetProperty(propertyName, out var valueElement) && valueElement.ValueKind == JsonValueKind.Number
