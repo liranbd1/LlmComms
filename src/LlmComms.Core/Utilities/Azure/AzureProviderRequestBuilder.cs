@@ -9,7 +9,7 @@ namespace LlmComms.Core.Utilities.Azure;
 /// <summary>
 /// Shared helpers for shaping Azure provider HTTP payloads and headers.
 /// </summary>
-internal static class AzureProviderRequestBuilder
+public static class AzureProviderRequestBuilder
 {
     public static Uri BuildOpenAIEndpoint(string resourceName, string path, string apiVersion)
     {

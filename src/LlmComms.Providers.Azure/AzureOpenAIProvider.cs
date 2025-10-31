@@ -20,6 +20,7 @@ using LlmComms.Core.Utilities;
 using LlmComms.Core.Utilities.Azure;
 using OpenAI.Chat;
 using ChatClient = global::OpenAI.Chat.ChatClient;
+using RequestContract = LlmComms.Abstractions.Contracts.Request;
 
 namespace LlmComms.Providers.Azure;
 
@@ -95,7 +96,7 @@ public sealed class AzureOpenAIProvider : IProvider
     /// <inheritdoc />
     public Task<Response> SendAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         CancellationToken cancellationToken)
     {
@@ -117,7 +118,7 @@ public sealed class AzureOpenAIProvider : IProvider
     /// <inheritdoc />
     public IAsyncEnumerable<StreamEvent> StreamAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         CancellationToken cancellationToken)
     {
@@ -138,7 +139,7 @@ public sealed class AzureOpenAIProvider : IProvider
 
     private async Task<Response> SendWithSdkAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         CancellationToken cancellationToken)
     {
@@ -160,7 +161,7 @@ public sealed class AzureOpenAIProvider : IProvider
 
     private Task<Response> SendWithTransportAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         CancellationToken cancellationToken)
     {
@@ -169,7 +170,7 @@ public sealed class AzureOpenAIProvider : IProvider
 
     private async IAsyncEnumerable<StreamEvent> StreamWithSdkAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -219,7 +220,7 @@ public sealed class AzureOpenAIProvider : IProvider
 
     private async IAsyncEnumerable<StreamEvent> StreamWithTransportAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -327,7 +328,7 @@ public sealed class AzureOpenAIProvider : IProvider
         throw new InvalidOperationException("Azure OpenAI provider requires a deployment identifier on the model or options.");
     }
 
-    private static IReadOnlyList<ChatMessage> BuildChatMessages(Request request)
+    private static IReadOnlyList<ChatMessage> BuildChatMessages(RequestContract request)
     {
         var messages = new List<ChatMessage>(request.Messages.Count);
 
@@ -356,7 +357,7 @@ public sealed class AzureOpenAIProvider : IProvider
         return messages;
     }
 
-    private static ChatCompletionOptions BuildCompletionOptions(Request request)
+    private static ChatCompletionOptions BuildCompletionOptions(RequestContract request)
     {
         var options = new ChatCompletionOptions();
 
@@ -531,7 +532,7 @@ public sealed class AzureOpenAIProvider : IProvider
 
     private async Task<Response> SendWithTransportCoreAsync(
         IModel model,
-        Request request,
+        RequestContract request,
         ProviderCallContext context,
         CancellationToken cancellationToken)
     {
@@ -583,7 +584,7 @@ public sealed class AzureOpenAIProvider : IProvider
         throw new InvalidOperationException("Azure OpenAI provider requires either an Endpoint or ResourceName for transport execution.");
     }
 
-    private static IDictionary<string, object?> BuildTransportPayload(Request request, bool stream)
+    private static IDictionary<string, object?> BuildTransportPayload(RequestContract request, bool stream)
     {
         var payload = new Dictionary<string, object?>
         {

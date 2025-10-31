@@ -10,7 +10,7 @@ namespace LlmComms.Providers.Azure;
 /// Configuration applied when wiring the Azure OpenAI provider.
 /// </summary>
 /// <remarks>
-/// These options mirror the knobs exposed by the <see cref="Azure.AI.OpenAI"/> SDK so that callers can
+/// These options mirror the knobs exposed by the Azure OpenAI SDK so that callers can
 /// supply credentials, override client creation, or swap in a custom transport when the default SDK
 /// pipeline is not desired.
 /// </remarks>

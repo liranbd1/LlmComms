@@ -48,9 +48,9 @@ public sealed class AzureAIInferenceProviderOptions
     public Func<string, ChatCompletionsClient>? ClientFactory { get; set; }
 
     /// <summary>
-    /// Gets or sets a hook for customizing <see cref="ChatCompletionsClientOptions"/> prior to client creation.
+    /// Gets or sets a hook for customizing <see cref="AzureAIInferenceClientOptions"/> prior to client creation.
     /// </summary>
-    public Action<ChatCompletionsClientOptions>? ConfigureClientOptions { get; set; }
+    public Action<AzureAIInferenceClientOptions>? ConfigureClientOptions { get; set; }
 
     /// <summary>
     /// Gets or sets a transport override allowing callers to intercept request execution.

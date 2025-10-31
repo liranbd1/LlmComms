@@ -10,6 +10,7 @@ using LlmComms.Abstractions.Exceptions;
 using LlmComms.Abstractions.Ports;
 using LlmComms.Providers.Azure;
 using LlmComms.Core.Transport;
+using RequestContract = LlmComms.Abstractions.Contracts.Request;
 
 namespace LlmComms.Tests.Unit.Providers;
 
@@ -33,7 +34,7 @@ public sealed class AzureOpenAIProviderTests
 
         var model = provider.CreateModel("gpt-4o-mini");
 
-        var request = new Request(new List<Message>
+        var request = new RequestContract(new List<Message>
         {
             new(MessageRole.System, "You are concise."),
             new(MessageRole.User, "Hello")
@@ -100,7 +101,7 @@ public sealed class AzureOpenAIProviderTests
         }, transport);
 
         var model = provider.CreateModel("gpt-4o-mini");
-        var request = new Request(new List<Message> { new(MessageRole.User, "Hi") });
+        var request = new RequestContract(new List<Message> { new(MessageRole.User, "Hi") });
 
         var act = () => provider.SendAsync(model, request, new ProviderCallContext("req-err"), CancellationToken.None);
 
@@ -134,7 +135,7 @@ public sealed class AzureOpenAIProviderTests
         }, transport);
 
         var model = provider.CreateModel("gpt-4o-mini");
-        var request = new Request(new List<Message> { new(MessageRole.User, "stream") });
+        var request = new RequestContract(new List<Message> { new(MessageRole.User, "stream") });
         var context = new ProviderCallContext("req-stream");
 
         var events = new List<StreamEvent>();
