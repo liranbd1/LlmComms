@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\LlmComms.Core\LlmComms.Core.csproj" />
     <ProjectReference Include="..\..\src\LlmComms.Providers.Ollama\LlmComms.Providers.Ollama.csproj" />
     <ProjectReference Include="..\..\src\LlmComms.Providers.OpenAI\LlmComms.Providers.OpenAI.csproj" />
+    <ProjectReference Include="..\..\src\LlmComms.Providers.Azure\LlmComms.Providers.Azure.csproj" />
   </ItemGroup>
 
 </Project>
